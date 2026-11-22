@@ -1,6 +1,18 @@
+# Build
 build/
 .gradle/
+/captures
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Segredos (nunca devem ir para o repositório)
 local.properties
+keystore.properties
 *.jks
 *.keystore
-.idea/
+google-services.json
