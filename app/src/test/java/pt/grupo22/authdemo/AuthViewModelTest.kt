@@ -40,4 +40,22 @@ class AuthViewModelTest {
         vm.onEmailChange("ana@ubi.pt"); vm.onPasswordChange("errada1234"); vm.login()
         assertNull(vm.state.value.user); assertEquals("Credenciais inválidas", vm.state.value.error)
     }
+
+    @Test fun register_updatesUserInState() {
+        val vm = AuthViewModel(FakeRepo(), dispatcher)
+        vm.onEmailChange("Novo@ubi.pt"); vm.onPasswordChange("abcdef12"); vm.register()
+        assertEquals("novo@ubi.pt", vm.state.value.user); assertNull(vm.state.value.error)
+    }
+
+    @Test fun startsLoggedIn_whenRepoHasASession() {
+        val vm = AuthViewModel(FakeRepo().apply { session = "ana@ubi.pt" }, dispatcher)
+        assertEquals("ana@ubi.pt", vm.state.value.user)
+    }
+
+    @Test fun logout_clearsStateAndSession() {
+        val repo = FakeRepo(); val vm = AuthViewModel(repo, dispatcher)
+        vm.onEmailChange("ana@ubi.pt"); vm.onPasswordChange("correta123"); vm.login()
+        vm.logout()
+        assertNull(vm.state.value.user); assertEquals("", vm.state.value.email); assertNull(repo.session)
+    }
 }

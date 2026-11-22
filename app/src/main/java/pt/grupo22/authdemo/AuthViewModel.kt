@@ -24,7 +24,8 @@ data class AuthUiState(
 /** Fluxo unidirecional: UI -> eventos (funções) -> ViewModel -> novo estado -> UI. */
 class AuthViewModel(
     private val repo: AuthRepository,
-    private val io: CoroutineDispatcher = Dispatchers.Default,
+    /** Trabalho pesado (PBKDF2 é CPU-bound, por isso Default e não IO). */
+    private val worker: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
     private val _state = MutableStateFlow(AuthUiState(user = repo.currentUser()))
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
@@ -46,7 +47,7 @@ class AuthViewModel(
         if (err != null) { _state.update { it.copy(error = err) }; return }
         _state.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
-            val r = withContext(io) {
+            val r = withContext(worker) {
                 if (register) repo.register(s.email, s.password) else repo.login(s.email, s.password)
             }
             _state.update {

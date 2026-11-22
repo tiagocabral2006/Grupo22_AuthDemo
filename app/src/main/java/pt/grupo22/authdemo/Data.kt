@@ -2,6 +2,7 @@ package pt.grupo22.authdemo
 
 import android.content.Context
 import android.util.Base64
+import java.security.MessageDigest
 
 data class AuthResult(val ok: Boolean, val error: String? = null)
 
@@ -19,16 +20,34 @@ interface SecureStorage {
     fun remove(key: String)
 }
 
-/** Valores cifrados com AES/GCM (chave no Keystore) antes de irem para SharedPreferences. */
+/**
+ * Valores cifrados com AES/GCM (chave no Keystore) antes de irem para SharedPreferences.
+ * Os próprios nomes das chaves também não ficam em claro (SHA-256), para o email do
+ * utilizador não aparecer no ficheiro XML.
+ */
 class KeystoreSecureStorage(context: Context, private val crypto: CryptoManager = CryptoManager()) : SecureStorage {
     private val prefs = context.getSharedPreferences("secure_prefs", Context.MODE_PRIVATE)
-    override fun get(key: String) = prefs.getString(key, null)?.let {
-        String(crypto.decrypt(Base64.decode(it, Base64.NO_WRAP)))
+
+    private fun id(key: String) = MessageDigest.getInstance("SHA-256")
+        .digest(key.toByteArray()).joinToString("") { "%02x".format(it) }
+
+    override fun get(key: String): String? {
+        val name = id(key)
+        val raw = prefs.getString(name, null) ?: return null
+        return try {
+            String(crypto.decrypt(Base64.decode(raw, Base64.NO_WRAP)))
+        } catch (e: Exception) {
+            // Chave invalidada ou dados corrompidos: tratar como "sem valor" em vez de crashar a app.
+            prefs.edit().remove(name).apply()
+            null
+        }
     }
+
     override fun put(key: String, value: String) {
-        prefs.edit().putString(key, Base64.encodeToString(crypto.encrypt(value.toByteArray()), Base64.NO_WRAP)).apply()
+        prefs.edit().putString(id(key), Base64.encodeToString(crypto.encrypt(value.toByteArray()), Base64.NO_WRAP)).apply()
     }
-    override fun remove(key: String) { prefs.edit().remove(key).apply() }
+
+    override fun remove(key: String) { prefs.edit().remove(id(key)).apply() }
 }
 
 class LocalAuthRepository(private val store: SecureStorage) : AuthRepository {

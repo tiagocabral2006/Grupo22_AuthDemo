@@ -6,23 +6,35 @@ import java.util.Base64
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 
-/** PBKDF2-HMAC-SHA256 com salt aleatório. Nunca se guarda a palavra-passe em claro. */
+/**
+ * PBKDF2-HMAC-SHA256 com salt aleatório. Nunca se guarda a palavra-passe em claro.
+ * Formato guardado: "iterações:salt(base64):hash(base64)". As iterações vão dentro do
+ * valor para o custo poder aumentar no futuro sem invalidar hashes antigos.
+ * 600 000 iterações = valor mínimo recomendado pela OWASP para PBKDF2-HMAC-SHA256.
+ */
 object PasswordHasher {
-    private const val ITERATIONS = 120_000
+    const val ITERATIONS = 600_000
     private fun b64(b: ByteArray) = Base64.getEncoder().encodeToString(b)
 
-    private fun derive(pw: String, salt: ByteArray): ByteArray =
+    private fun derive(pw: String, salt: ByteArray, iterations: Int): ByteArray =
         SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-            .generateSecret(PBEKeySpec(pw.toCharArray(), salt, ITERATIONS, 256)).encoded
+            .generateSecret(PBEKeySpec(pw.toCharArray(), salt, iterations, 256)).encoded
 
     @JvmStatic fun hash(pw: String): String {
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
-        return "${b64(salt)}:${b64(derive(pw, salt))}"
+        return "$ITERATIONS:${b64(salt)}:${b64(derive(pw, salt, ITERATIONS))}"
     }
 
     @JvmStatic fun verify(pw: String, stored: String): Boolean {
-        val (s, h) = stored.split(":").takeIf { it.size == 2 } ?: return false
-        val expected = Base64.getDecoder().decode(h)
-        return MessageDigest.isEqual(derive(pw, Base64.getDecoder().decode(s)), expected)
+        val parts = stored.split(":")
+        if (parts.size != 3) return false
+        val iterations = parts[0].toIntOrNull() ?: return false
+        return try {
+            val salt = Base64.getDecoder().decode(parts[1])
+            val expected = Base64.getDecoder().decode(parts[2])
+            MessageDigest.isEqual(derive(pw, salt, iterations), expected) // tempo constante
+        } catch (e: IllegalArgumentException) {
+            false // base64 inválido
+        }
     }
 }

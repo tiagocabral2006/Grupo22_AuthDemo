@@ -19,4 +19,9 @@ class ValidatorAndHasherTest {
         assertTrue(PasswordHasher.verify("segredo123", h1))
         assertFalse(PasswordHasher.verify("errada123", h1))
     }
+    @Test fun hashEncodesIterationsAndRejectsMalformed() {
+        assertTrue(PasswordHasher.hash("segredo123").startsWith("${PasswordHasher.ITERATIONS}:"))
+        assertFalse(PasswordHasher.verify("segredo123", "lixo"))
+        assertFalse(PasswordHasher.verify("segredo123", "abc:!!:!!"))
+    }
 }
