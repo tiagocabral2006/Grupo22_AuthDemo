@@ -16,7 +16,8 @@ App de demonstração: autenticação local, MVVM com fluxo unidirecional, armaz
 - `docs/Guiao_Apresentacao.md` — guião da apresentação e perguntas para a turma.
 
 ## Executar
-Abrir a pasta no Android Studio, sincronizar o Gradle (wrapper 8.9, AGP 8.7.3, JDK 17) e correr em emulador/dispositivo (API 26+).
+Abrir a pasta no Android Studio, sincronizar o Gradle (wrapper 9.5.0, AGP 9.3.3, Kotlin 2.4.21; JDK 17 ou superior) e correr em emulador/dispositivo (API 26+).
+É preciso ter instalada a plataforma Android 37 (SDK Manager).
 A funcionalidade "Guardar no gestor / Usar guardadas" requer Google Play Services e um gestor de palavras-passe configurado.
 
 ## Testes
